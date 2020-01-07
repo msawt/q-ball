@@ -9,9 +9,10 @@ int k = 10; //Specify k number of points in the xy plane
 
 double* getDirs(int k,int n);
 
-double getEquator(int k);
+double* getEquator(const int k); //Returned array is dynamically allocated, must free up
+// all sub-lists as well
 
-double* rotationFunc(double u[3]);
+double* getRotationMat(double z[3],double u[3]); //Also dynamically allocated
 
 
 

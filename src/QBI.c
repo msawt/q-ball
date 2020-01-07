@@ -21,12 +21,12 @@ PROCESS:
 	3. Then, the equator points for each u can be written as Rz(ui)C
  ============================================================================
  */
-
 #include <stdio.h>
 #include <stdlib.h>
 #include "QBI.h"
 
-
+#define m 10 //Length of diffusion vector (to test)
+double e[m]; //Diffusion signal vector
 
 int main(void) {
 
