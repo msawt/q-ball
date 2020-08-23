@@ -16,7 +16,7 @@
 #ifndef INTERPOLATION_H_
 #define INTERPOLATION_H_
 
-double getKernel(double n1[3], double n2[3]);
+double getKernel(double* n1, double* n2);
 
 
 
