@@ -13,7 +13,7 @@ Then, specify p unit vectors {v} (sampling directions). The diffusion signal
 void getDiffusionSignal(double **q, double **v, int qLen, int vLen,double**out); //IMPORTANT: Output
 // Matrix is dynamically allocated, must free up when done
 
-double* estimateWeightVector(double ** H, int qLen, int vLen, double * e, int eLen);
+double* estimateWeightVector(double ** H, int m, int p, double * e);
 //Also dynamically allocated
 
 void getReconstructionMatrix(double ** G, double ** H, int k, int n, int p, int m, double ** out);

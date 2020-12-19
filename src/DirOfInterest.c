@@ -4,7 +4,7 @@
 #include<stdlib.h>
 #include<stdio.h>
 
-#define pi 3.14159265
+#define pi 3.14159265358979323846
 
 void getEquator(const int k, double ** C){
 
@@ -25,16 +25,12 @@ void getEquator(const int k, double ** C){
 	}
 }
 
-void getRotationMat(double* z,double* u, double** out){
+void getRotationMat(double z[3],double u[3], double** out){
 
 	//In:
-	//	3 x 1 corresponding equator point z
+	//	3 x 1 normal vector to the circle-plane
 	//	3 x 1 direction of interest u
 	//	3 x 3 output rotation matrix for that direction
-
-	//Operation:
-	//	Returns the matrix that you multiply each equator point by in order to rotate the equator to u
-
 
 
 	double add[3];

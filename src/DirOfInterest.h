@@ -12,7 +12,7 @@
 void getEquator(const int k, double ** C); //Initialize array and pass in C as argument
 // Remember to free up all space taken
 
-void getRotationMat(double* z,double* u, double** out); //Also dynamically allocated
+void getRotationMat(double z[3],double u[3], double** out); //Also dynamically allocated
 
 
 

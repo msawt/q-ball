@@ -7,13 +7,11 @@ Q: 3 x m column matrix of diffusion sampling wavevectors
 U: 3 x n matrix of reconstruction directions/directions of interest
 V: 3 x p column matrix of basis function centers
 
-(Code assumes that U = V)
-
 LIST OF VARIABLES AND THEIR ASSOCIATED FUNCTIONS:
 H: getDiffusionSignal
 theta: getEquator (Not returned)
 C: getEquator
-S: getRotationMat (Multiply getRotationMat(c,u) by c for c in C and u in U)
+S: getRotationMat
 G: getDiffusionSignal
 A: getReconstructionMatrix
 Z: calculateNormalizationConstant
@@ -26,169 +24,7 @@ psi: computeODF
 #define DT_FLOAT32 16
 #define NIFTI_FTYPE_NIFTI1_1  1
 
-
-void QBall(double* e, double ** Q, double ** U, double ** V, int k, int m, int n, int p, double* ODF){
-
-	double ** C = malloc(sizeof(double*)*3);
-	for(int i = 0; i < 3; ++i){
-		C[i] = malloc(sizeof(double)*k);
-	}
-
-	double** S = malloc(sizeof(double* )*3);
-	for(int i = 0; i < 3;++i){
-		S[i] = malloc(sizeof(double)*k*n);
-	}
-
-	double** G = malloc(sizeof(double*)*k*n);
-	for(int i = 0; i < (k*n); ++i){
-		G[i] = malloc(sizeof(double)*p);
-	}
-
-	double** A = malloc(sizeof(double*)*n);
-	for(int i = 0; i < n; ++i){
-		A[i] = malloc(sizeof(double)*m);
-	}
-
-	double ** H = malloc(sizeof(double*) * m);
-	for(int i = 0; i < m; ++i){
-		H[i] = malloc(sizeof(double)*p);
-	}
-
-    //printf("Finished allocating memory\n");
-
-	getDiffusionSignal(Q,V,m,p,H); //Outputs H
-
-    //printf("Finished calling getDiffusionSignal\n");
-
-	getEquator(k,C); //Outputs C
-
-    //printf("Finished calling getEquator\n");
-
-
-	int counter = 0;
-	for(int i = 0; i < k; ++i){ //Outputs S
-		for(int j = 0; j < n; ++j){
-
-			double* ci = malloc(sizeof(double)*3);
-			ci[0] = C[0][i];
-			ci[1] = C[1][i];
-			ci[2] = C[2][i];
-
-			double* ui = malloc(sizeof(double)*3);
-			ui[0] = U[0][j];
-			ui[1] = U[1][j];
-			ui[2] = U[2][j];
-
-            //printf("ui: %f, %f, %f\n",ui[0],ui[1],ui[2]);
-            //printf("ci: %f, %f, %f\n",ci[0],ci[1],ci[2]);
-
-			double** mat = malloc(sizeof(double* )*3);
-			for(int _ = 0; _ < 3;++_){
-				mat[_] = malloc(sizeof(double)*3);
-			}
-			getRotationMat(ci,ui,mat);
-
-            //zprintf("mat: \n %f %f %f \n %f %f %f \n %f %f %f \n",mat[0][0],mat[0][1],mat[0][2],mat[1][0],mat[1][1],mat[1][2],mat[2][0],mat[2][1],mat[2][2]);
-
-			//Get Rz(u)*c
-			double si[3];
-			for(int a = 0; a < 3; ++a){
-				double sum = 0;
-				for(int b = 0; b < 3; ++b){
-					sum += mat[a][b] * ci[b];
-				}
-                S[a][counter] = sum;
-                //printf("S[%d][%d] = %f\n",a,counter,sum);
-			}
-			counter++;
-			for(int zz = 0; zz < 3; ++zz){
-				free(mat[zz]);
-			}
-			free(mat);
-			free(ci);
-			free(ui);
-		}
-	}
-
-    /*for(int i = 0; i < 3; ++i){
-        for(int j = 0; j < k*n; ++j){
-            printf("%f\t",S[i][j]);
-        }
-        printf("\n");
-    }*/
-
-    //printf("Finished getting S\n");
-
-	getDiffusionSignal(S,V,k*n,p,G); //Outputs G
-
-    /*for(int i = 0; i < k*n; ++i){
-        for(int j = 0; j < p; ++j){
-            printf("%f\t",G[i][j]);
-        }
-        printf("\n");
-    }*/
-
-    //printf("Finished calling getDiffusionSignal\n");
-
-	getReconstructionMatrix(G,H,k,n,p,m,A); //Outputs A
-
-    /*printf("A: \n");
-    for(int i = 0; i < n; ++i){
-        for(int j = 0; j < m; ++j){
-            printf("%f\t",A[i][j]);
-        }
-        printf("\n");
-    }*/
-
-    //printf("Finished calling getReconstructionMatrix\n");
-
-	computeODF(A,e,n,m,ODF); //Outputs ODF
-
-    /*printf("\t\tODF: \t");
-    for(int i = 0; i < n; ++i){
-        printf("%f",ODF[i]);
-    }
-    printf("\n");*/
-
-
-	for(int i = 0; i < 3; ++i){
-		free(C[i]);
-		free(S[i]);
-	}
-	free(C);
-	free(S);
-	for(int i = 0; i < (k*n); ++i){
-		free(G[i]);
-	}
-	free(G);
-
-	for(int i = 0; i < n; ++i){
-		free(A[i]);
-	}
-	free(A);
-
-	for(int i = 0; i < p; ++i){ //Free memory
-		free(H[i]);
-	}
-	free(H);
-}
-
 int main(int argc, char **argv) {
-	//Change arguments to main so you can run from command line
-	//Command line arguments: -data, -bvec, -mask, -pthresh,-ndir, -odir, -datadir(?)
-
-	//Preprocess arguments and change format of nii file paths to actual matrices
-
-    //qbi_initialize_opts
-
-	//q: read_bvecs_from_file (diff->bvecs)
-	//e: read_diff_data_from_file (diff->nii_image->data[i] for i in image) is in a void pointer, might be different syntax for using?
-	//U/V: load_tess_from_file (reco_tess)
-
-	//Convert the values to the format required for the QBall function and get k,m,n,and p
-
-	//Do this on every voxel
-
     QBI_RECON qbi;
     DIFF_DATA diff;
 
@@ -196,49 +32,33 @@ int main(int argc, char **argv) {
 
     qbi_initialize_opts(&qbi, argc, argv);
 
+    /* Set up the output data structure that will become the NIFTI direction
+     files. */
+    fprintf(stderr, "Initializing output data structures...\n");
+    OUTPUT_DATA *output = initialize_output(diff.nii_image, qbi.num_output_files);
 
-    /* Load the precomputed spherical domains
-    //////////////////////////////////////////////////////////////////////Probably not needed
+    int m = diff.n_b_high;
+    int k = 30;
+
+    /* Load the precomputed spherical domains */
     char *strbuf = malloc(sizeof(char)*strlen(qbi.datadir) + 15);
 
-
     fprintf(stderr, "Loading spherical domains...\n");
-
-    sprintf(strbuf, "%s%c%s", qbi.datadir, DIRSEP, "tess_L3.dat");
-    ICOS_TESS *restart_tess = load_tess_from_file(strbuf); //Needed to find maxima? luis should explain it on thursday
-
-
-    sprintf(strbuf, "%s%c%s", qbi.datadir, DIRSEP, "tess_L2.dat");
-    ICOS_TESS *deco_tess    = load_tess_from_file(strbuf);
+    sprintf(strbuf, "%s%c%s", qbi.datadir, DIRSEP, "tess_L1.dat");
+    ICOS_TESS *restart_tess = load_tess_from_file(strbuf);
     
-
-    /*sprintf(strbuf, "%s%c%s", qbi.datadir, DIRSEP, "tess_L1.dat");
-    ICOS_TESS *reco_tess    = load_tess_from_file(strbuf);			//U/V
-    if (reco_tess == NULL) {
+    sprintf(strbuf, "%s%c%s", qbi.datadir, DIRSEP, "tess_L3.dat");
+    ICOS_TESS *reco_tess    = load_tess_from_file(strbuf);
+    if (reco_tess == NULL || restart_tess == NULL) {
         fprintf(stderr, "Spherical tessellation files could not be loaded.\n");
         fprintf(stderr, "Make sure that the -datadir option points to the\n");
         fprintf(stderr, "directory that contains the 'tess_L*.dat' files.\n");
         exit(1);
     }
     free(strbuf); strbuf = NULL;
-
-    qbi.reco_tess = reco_tess;
-    //qbi.deco_tess = deco_tess;
+    
+    qbi.reco_tess = reco_tess;  
     qbi.restart_tess = restart_tess;
-    //////////////////////////////////////////////////////////////////////////////
-    */
-
-    /* Set up the output data structure that will become the NIFTI direction
-     files. */
-    fprintf(stderr, "Initializing output data structures...\n");
-    OUTPUT_DATA *output = initialize_output(diff.nii_image, qbi.num_output_files);
-
-    //int n_reco_dirs = reco_tess->num_vertices;
-    //int n_deco_dirs = deco_tess->num_vertices;
-
-    int m = diff.n_volumes;
-    //int n = n_reco_dirs;
-    int k = qbi.num_output_files;
 
     //Allocate Memory to Q, U, and V
 
@@ -249,122 +69,77 @@ int main(int argc, char **argv) {
 		Q[i] = malloc(sizeof(double)*m);
 	}
 
+    int counter = 0;
 	for(int i = 0; i < m; ++i){
-		Q[0][i] = (double) diff.bvecs[i];
-		Q[1][i] = (double) diff.bvecs[m+i];
-		Q[2][i] = (double) diff.bvecs[(2*m)+i];
+        while(diff.bvals[counter]<200){
+            counter++;
+        }
+        Q[0][i] = (double) diff.bvecs[counter];
+        Q[1][i] = (double) diff.bvecs[diff.n_volumes+counter];
+        Q[2][i] = (double) diff.bvecs[(2*diff.n_volumes)+counter];
 
-        //printf("Values of Q for i = %d: %f, %f, %f\n",i,Q[0][i],Q[1][i],Q[2][i]);
+        //printf("Q[%d] = %f,%f,%f\n",i,Q[0][i],Q[1][i],Q[2][i]);
+        //printf("Q Length: %f\n", Q[0][i]*Q[0][i] + Q[1][i]*Q[1][i] + Q[2][i]*Q[2][i]);
+        counter++;
 	}
 
-    //Load in directions of interest
+    //Load in directions of interest (no longer used)
 
-    float * temp = malloc(sizeof(float)*1000);
+    /*
+    float * temp = malloc(3*sizeof(float)*199);
 
-    char sphere[10] = "sphere.txt";
-    int n = read_acsii_file_to_float_array(sphere, temp, 3 * 1000) / 3;
+    char *sphere = "sphere3.txt";
+    int n = read_acsii_file_to_float_array(sphere, temp, 3 * 199) / 3;
+    */
 
+    int n = qbi.reco_tess->num_vertices;
     int n_reco_dirs = n;
 
     double** U = malloc(sizeof(double*)*3);
-    for(int i = 0; i < 3; ++i){
-        U[i] = malloc(sizeof(double)*n);
-    }
-
     double ** V = malloc(sizeof(double*) * 3);
     for(int i = 0; i < 3; ++i){
+        U[i] = malloc(sizeof(double)*n);
         V[i] = malloc(sizeof(double)*n);
     }
 
+
     for(int i = 0; i < n; ++i){
-        U[0][i] = temp[3*i];
-        V[0][i] = temp[3*i];
 
-        U[1][i] = temp[3*i+1];
-        V[1][i] = temp[3*i+1];
+        U[0][i] = qbi.reco_tess->vertices[i][0];
+        V[0][i] = qbi.reco_tess->vertices[i][0];
 
-        U[2][i] = temp[3*i+2];
-        V[2][i] = temp[3*i+2];
+        U[1][i] = qbi.reco_tess->vertices[i][1];
+        V[1][i] = qbi.reco_tess->vertices[i][1];
 
-        printf("U/V[%d] = %f\t%f\t%f\n", i, U[0][i],U[2][i],U[2][i]);
+        U[2][i] = qbi.reco_tess->vertices[i][2];
+        V[2][i] = qbi.reco_tess->vertices[i][2];
+
+        //printf("U[%d]: %f, %f, %f\n",i,U[0][i],U[1][i],U[2][i]);
     }
 
-    free(temp);
+    double** A = malloc(sizeof(double*)*n);
+    //double** A2 = malloc(sizeof(double*)*n);
+    for(int i = 0; i < n; ++i){
+        A[i] = malloc(sizeof(double)*m);
+        //A2[i] = malloc(sizeof(double)*m);
+    }
 
-        /* set up the maxima list. */
+    printf("Building Reconstruction Matrix...\n");
+
+    //Inputs: 
+        //Q : 3 × m column matrix of diffusion sampling wavevectors 
+        //U : 3 × n column matrix of reconstruction points 
+    //Returns the reconstruction matrix A, approximated using the "soft equator" A = ϕ(cos−1 |UTQ|)
+    getDiffusionSignal(U,Q,n,m,A);
+
+    //Set up the maxima list
     MAXIMA *maxima_list  = malloc(sizeof(MAXIMA) * n_reco_dirs);
     if (maxima_list == NULL) {
         fprintf(stderr, "Unable to allocate memory for maxima list.\n");
         exit(1);
     }
 
-    /* initialize the coefficient storage for a single voxel 
-    double *coef = malloc(sizeof(double) * n_reco_dirs); //This is equal to ODF[i] for the ith voxel in the image.
-    if (coef == NULL) {
-        fprintf(stderr, "Unable to allocate memory for coefficients.\n");
-        exit(1);
-    }*/
-
-////////////////////// Temp values to see if it runs
-    /*
-    U[0][0] = 0;
-    U[1][0] = 0;
-    U[2][0] = 1;
-
-    U[0][1] = 0;
-    U[1][1] = 1;
-    U[2][1] = 0;
-
-    U[0][2] = 1;
-    U[1][2] = 0;
-    U[2][2] = 0;
-
-    U[0][3] = 0;
-    U[1][3] = 0;
-    U[2][3] = -1;
-
-    U[0][4] = 0;
-    U[1][4] = -1;
-    U[2][4] = 0;
-
-    U[0][5] = 0.57735026919;
-    U[1][5] = 0.57735026919;
-    U[2][5] = 0.57735026919;
-
-    V[0][0] = 0;
-    V[1][0] = 0;
-    V[2][0] = 1;
-
-    V[0][1] = 0;
-    V[1][1] = 1;
-    V[2][1] = 0;
-
-    V[0][2] = 1;
-    V[1][2] = 0;
-    V[2][2] = 0;
-
-    V[0][3] = 0;
-    V[1][3] = 0;
-    V[2][3] = -1;
-
-    V[0][4] = 0;
-    V[1][4] = -1;
-    V[2][4] = 0;
-
-    V[0][5] = 0.57735026919;
-    V[1][5] = 0.57735026919;
-    V[2][5] = 0.57735026919;
-    */
-
-//////////////////////////
-
-
-
-    printf("Dimensions of Q: 3 x %d\n", m);
-    printf("Dimensions of U/V: 3 x %d\n", n);
-
 	double* ODF = malloc(sizeof(double)*n);
-
 
     fprintf(stderr, "Starting QBI reconstruction...\n");
     /////////////////////////////////////////////////////// ACTUAL RECON CODE FOR EACH VOXEL
@@ -381,7 +156,7 @@ int main(int argc, char **argv) {
                 MAXIMA* max_list = malloc(sizeof(MAXIMA)*n);
 
 
-            	int load_ok = load_voxel_double_all(&diff, vx, vy, vz,NULL);
+            	int load_ok = load_voxel_double_highb(&diff, vx, vy, vz);
 
                 //printf("Loaded voxel data\n");
 
@@ -403,14 +178,32 @@ int main(int argc, char **argv) {
 
                 double* e = diff.single_voxel_storage;
 
-            	QBall(e,Q,U,V,k,m,n,n,ODF);
+            	computeODF(A,e,n,m,ODF);
 
-                //printf("Finished calling QBall\n");
 
-                //n_maxima = find_local_maxima(reco_tess, ODF, qbi.prob_thresh, restart_tess, maxima_list);
-                n_maxima = temp_find_max(ODF, n, max_list);
+                printf("ODF: \n");
+                for(int i = 0; i < n; ++i){
+                    printf("%f, ",ODF[i]);
+                }
+                printf("\n");
 
-                //printf("Finished finding maxima\n");
+                //printf("Negative ODF Values: \t");
+                int count = 0;
+                for(int i = 0; i < n; ++i){
+                    //printf("%f at %f,%f,%f\n",ODF[i], U[0][i],U[1][i],U[2][i]);
+                    if(ODF[i] < 0){
+                        count++;
+                    }
+                }
+                //printf("Number of Negative ODF Values: %d\n\n\n",count);
+
+                n_maxima = find_local_maxima(qbi.reco_tess,ODF,0,qbi.restart_tess,maxima_list); //prob_thresh is lower for testing, change back to qbi.prob_thresh for final version
+
+                printf("Maxima: ");
+                for(int i = 0; i < 5; ++i){
+                    printf("%f at %d,", maxima_list[i].value, maxima_list[i].index);
+                }
+                printf("\n\n");
 
                 add_maxima_to_output(output, vx, vy, vz, U, maxima_list, n_maxima);
 
@@ -440,7 +233,99 @@ int main(int argc, char **argv) {
 	free(Q);
 	free(V);
 
+    for(int i = 0; i < n; ++i){
+        free(A[i]);
+    }
+    free(A);
+
 	return 0;
+}
+
+
+void getA(double ** Q, double ** U, double ** V, int k, int m, int n, int p, double ** A) {
+
+    double ** C = malloc(sizeof(double*)*3);
+    for(int i = 0; i < 3; ++i){
+        C[i] = malloc(sizeof(double)*k);
+    }
+
+    double** S = malloc(sizeof(double* )*3);
+    for(int i = 0; i < 3;++i){
+        S[i] = malloc(sizeof(double)*k*n);
+    }
+
+    double** G = malloc(sizeof(double*)*k*n);
+    for(int i = 0; i < (k*n); ++i){
+        G[i] = malloc(sizeof(double)*p);
+    }
+
+    double ** H = malloc(sizeof(double*) * m);
+    for(int i = 0; i < m; ++i){
+        H[i] = malloc(sizeof(double)*p);
+    }
+
+    getDiffusionSignal(Q,V,m,p,H); //Outputs H (ConvolutionAndPrediction)
+
+    getEquator(k,C); //Outputs C (DirOfInterest)
+
+    int counter = 0;
+    double normalDirection[3] = {0,0,1};
+    for(int i = 0; i < n; ++i){
+        //For each direction of interest, multiply C by the rotation matrix and add it to S
+        double Ui[3] = {U[0][i],U[1][i],U[2][i]};
+
+        double** rotationMatrix = malloc(sizeof(double*)*3);
+        for(int _ = 0; _ < 3; ++_){
+            rotationMatrix[_] = malloc(sizeof(double)*3);
+        }
+
+        if(Ui[0]==0&&Ui[1]==0&&Ui[2]==-1){
+            Ui[2] = 1;
+        }
+
+        getRotationMat(normalDirection,Ui,rotationMatrix);
+
+        for(int j = 0; j < 3; ++j){
+            for(int z = 0; z < k; z++){
+                double sum = 0;
+                for(int q = 0; q < 3; ++q){
+                    sum += rotationMatrix[j][q]*C[q][z];
+                }
+                S[j][z+counter] = sum;
+            }
+        }
+
+        counter += k;
+
+
+        for(int _ = 0; _ < 3; ++_){
+            free(rotationMatrix[_]);
+        }
+        free(rotationMatrix);
+
+    }
+
+
+    getDiffusionSignal(S,V,k*n,p,G); //Outputs G (ConvolutionAndPrediction)
+
+    getReconstructionMatrix(G,H,k,n,p,m,A); //Outputs A (ConvolutionAndPrediction)
+
+    for(int i = 0; i < 3; ++i){
+        free(C[i]);
+        free(S[i]);
+    }
+    free(C);
+    free(S);
+
+    for(int i = 0; i < (k*n); ++i){
+        free(G[i]);
+    }
+    free(G);
+
+    for(int i = 0; i < m; ++i){
+        free(H[i]);
+    }
+    free(H);
 }
 
 void qbi_initialize_opts(QBI_RECON *qbi, int argc, char **argv)
@@ -534,7 +419,26 @@ void qbi_initialize_opts(QBI_RECON *qbi, int argc, char **argv)
             qbi->bvec_filename = argv[opt+1];
             opt++;
             continue;
-        } else {
+        } 
+        else if (0 == strcmp(argv[opt], "-S0")) {
+            if (opt+1 == argc || argv[opt+1][0] == '-') {
+                fprintf(stderr, "Error: -S0 requires an argument.\n");
+                exit(1);
+            }
+            qbi->S0_filename = argv[opt+1];
+            opt++;
+            continue;
+        }
+        else if (0 == strcmp(argv[opt], "-bval")) {
+            if (opt+1 == argc || argv[opt+1][0] == '-') {
+                fprintf(stderr, "Error: -bval requires an argument.\n");
+                exit(1);
+            }       
+            qbi->bval_filename = argv[opt+1];
+            opt++;
+            continue;
+        }
+        else {
             fprintf(stderr, "Ignoring junk on command line: %s\n", argv[opt]);
             fprintf(stderr, "Use -h to see a list of options.\n");
             exit(1);
@@ -551,11 +455,19 @@ void qbi_initialize_opts(QBI_RECON *qbi, int argc, char **argv)
         exit(1);
     }
 
+    fprintf(stderr, "S0 image will be loaded from %s.\n", qbi->S0_filename);
+    qbi->diff->S0 = nifti_image_read(qbi->S0_filename, 1);
+    if (qbi->diff->S0 == NULL) {
+        exit(1);
+    }
+
     /* these functions call exit() if anything bad happens. */
     fprintf(stderr, "Loading diffusion data...\n");
     read_diff_data_from_file(qbi->data_filename, qbi->diff);
     fprintf(stderr, "Loading gradient vectors...\n");
     read_bvecs_from_file(    qbi->bvec_filename, qbi->diff);
+    fprintf(stderr, "Loading bvalues...\n");
+    read_bvals_from_file(    qbi->bval_filename, qbi->diff);
 
     fprintf(stderr, "Loading binary mask...\n");
     qbi->diff->mask = nifti_image_read(qbi->mask_filename, 1);
@@ -697,6 +609,62 @@ void read_diff_data_from_file(char *filename, DIFF_DATA *diff)
     }
 }
 
+/*****************************************************************************
+ * Reads a text file containing the bvalues into a floating point array
+ * contained in the DIFF_DATA structure.
+ *
+ * Also separates any low-bvalues from high-bvalues according to their indices
+ * in the floating point array.
+ *****************************************************************************/
+void read_bvals_from_file(char *filename, DIFF_DATA *diff)
+{
+    
+    int i, n_low, n_high;
+    float *bval_array = malloc(sizeof(float) * diff->n_volumes);
+    if (bval_array == NULL) {
+        fprintf(stderr, "Unable to allocate memory for bvalue table.\n");
+        exit(1);
+    }
+    
+    int n_bvals = read_acsii_file_to_float_array(filename, bval_array,
+                                                 diff->n_volumes);
+    diff->bvals = bval_array;
+    
+    n_low = 0;
+    for (i=0; i<n_bvals; i++) {
+        if (bval_array[i] < 200.0) {
+            n_low++;
+        }
+    }
+    
+    diff->b_low_ind = malloc(sizeof(int) * n_low);
+    if (diff->b_low_ind == NULL) {
+        fprintf(stderr, "Unable to allocate memory for low-b data.\n");
+        exit(1);
+    }
+    
+    diff->b_high_ind = malloc(sizeof(int) * n_bvals-n_low);
+    if (diff->b_high_ind == NULL) {
+        fprintf(stderr, "Unable to allocate memory for high-b data.\n");
+        exit(1);
+    }
+    
+    n_low = 0;
+    n_high = 0;
+    for (i=0; i<n_bvals; i++) {
+        if (bval_array[i] < 200.0) {
+            diff->b_low_ind[n_low++] = i;
+        } else {
+            diff->b_high_ind[n_high++] = i;
+        }
+    }
+    
+    diff->n_b_low = n_low;
+    diff->n_b_high = n_high;
+    
+}
+
+
 void read_bvecs_from_file(char *filename, DIFF_DATA *diff)
 {
 
@@ -781,11 +749,11 @@ int read_acsii_file_to_float_array(char *filename, float *data, int data_size){
     }
 
     fclose(f);
-    printf("1\n");
+    //printf("1\n");
     free(strbuf);
-    printf("2\n");
+    //printf("2\n");
     free(tmp);
-    printf("3\n");
+    //printf("3\n");
 
     return elements_read;
 }
@@ -895,37 +863,112 @@ int find_local_maxima(ICOS_TESS *domain, double *values, double min_value,
 
 }
 
-///////////////////////////////////////////// Temporary Debug Functions
-int temp_find_max(double* ODF, int ODFLen, MAXIMA* maxima_list){
-    int n_maxima = ODFLen;
-    for(int i = 0; i < ODFLen; ++i){
-        maxima_list[i].index = i;
-        maxima_list[i].value = ODF[i];
+///////////////////////////////////////////// Use gradient ascent to compute maximas on the sphere
+int grad_find_max(double* ODF, int n, MAXIMA* maxima_list, int adj[199][4]){
+
+    int numStartingPoints = 20;
+    int startingIndices[numStartingPoints];
+    for(int i = 0; i < numStartingPoints; ++i){ //Evenly sample starting points along the sphere
+        startingIndices[i] = (i+1) * (n / numStartingPoints);
     }
+
+    for(int i = 0; i < numStartingPoints; ++i){ //Perform gradient ascent at each starting point
+        bool maxFound = false;
+        int prevIndex = startingIndices[i];
+        double prevVal = ODF[startingIndices[i]];
+
+        //printf("NEW STARTING POINT \n\n");
+
+        while(maxFound == false){ //Traverse the sphere until a maxima is found
+
+            int dir1 = adj[prevIndex][0];
+            int dir2 = adj[prevIndex][1];
+            int dir3 = adj[prevIndex][2];
+            int dir4 = adj[prevIndex][3]; //Indexes for each of the four directions
+
+            double val1 = ODF[dir1];
+            double val2 = ODF[dir2];
+            double val3 = ODF[dir3];
+            double val4 = ODF[dir4]; //Values for each of the four directions
+
+            //printf("current: %d adjacent: %d(%f), %d(%f), %d(%f), %d(%f)\n",prevIndex,dir1,val1,dir2,val2,dir3,val3,dir4,val4);
+
+            if(prevVal >= val1 && prevVal >= val2 && prevVal >= val3 && prevVal >= val4){ //If the previous value is greater than all of the traversal directions, a maxima has been found.
+                maxFound = true;
+                break;
+            }
+            else{ //If not, traverse in the direction that has the maximum increase
+                if(val1 >= val2 && val1 >= val3 && val1 >= val4){
+                    prevVal = val1;
+                    prevIndex = dir1;
+                }
+                else if(val2 >= val1 && val2 >= val3 && val2 >= val4){
+                    prevVal = val2;
+                    prevIndex = dir2;
+                }
+                else if(val3 >= val1 && val3 >= val2 && val3 >= val4){
+                    prevVal = val3;
+                    prevIndex = dir3;
+                }
+                else if(val4 >= val1 && val4 >= val2 && val4 >= val3){
+                    prevVal = val4;
+                    prevIndex = dir4;
+                }
+                else{
+                }
+            }
+
+        }
+
+        //Once a maxima is found, add it to the list.
+
+        maxima_list[i].index = prevIndex;
+        maxima_list[i].value = prevVal;
+
+    }
+
+    //Filter out any redundant maxima
+
+    int n_maxima = numStartingPoints; //Change based on if any maxima are filtered out
+
+    for(int i = 0; i < n_maxima; ++i){ //Remove duplicate indexes
+        for(int j = i+1; j < n_maxima; ++j){
+            if(maxima_list[i].index == maxima_list[j].index){
+                for(int k = j; k < n_maxima; ++k){
+                    maxima_list[k] = maxima_list[k+1];
+                }
+                n_maxima--;
+                j--;
+            }
+        }
+    }
+
     qsort((void *)maxima_list, n_maxima, sizeof(MAXIMA), &maxima_compare);
 
-    printf("\nShould be ordered in descending order\nMaxima: ");
-    for(int i = 0; i < ODFLen; ++i){
-        printf("%f\t",maxima_list[i].value);
+    printf("First 5 Maxima values: \n");
+    for(int i = 0; i < 5; ++i){
+        printf("%f at %d\t",maxima_list[i].value,maxima_list[i].index);
     }
     printf("\n");
 
-    return ODFLen;
+    return n_maxima;
 }
 
-
-
-
-
-/////////////////////////////////////////////
+int nii_voxel3_index(nifti_image *nim, const int x, const int y, const int z)
+{
+    return (x + y*nim->nx + z*nim->nx*nim->ny);
+}
 
 void qbi_print_usage(void)
 {
 
-    fprintf(stderr, "Usage: mow_recon [OPTIONS]\n\n");
+    fprintf(stderr, "Usage: qbi_recon [OPTIONS]\n\n");
     fprintf(stderr, "where OPTIONS is all of the following:\n");
     fprintf(stderr, "  -data <path>      path to diffusion-weighted data in\n");
     fprintf(stderr, "                    NIFTI format (.nii or .nii.gz)\n\n");
+    fprintf(stderr, "  -bval <path>      path to the text file containing the\n");
+    fprintf(stderr, "                    b-values corresponding to the diffusion\n");
+    fprintf(stderr, "                    weighted volumes in the data file.\n\n");
     fprintf(stderr, "  -bvec <path>      path to the text file containing the\n");
     fprintf(stderr, "                    gradient directions for the diffusion\n");
     fprintf(stderr, "                    weighted volumes in the data file.\n\n");
@@ -941,8 +984,11 @@ void qbi_print_usage(void)
     fprintf(stderr, "                    should be saved. They will be named 'V_xx_all.nii\n");
     fprintf(stderr, "                    where xx ranges from 0 to ndir-1.\n\n");
     fprintf(stderr, "  -datadir <path>   path to the TrackTools data directory.\n\n");
-    fprintf(stderr, "  -log-bad-voxels   If this option is used, mow_recon will print\n");
+    fprintf(stderr, "  -log-bad-voxels   If this option is used, qbi_recon will print\n");
     fprintf(stderr, "                    a list of all voxels that could not be reconstructed.\n\n");
+    fprintf(stderr, "  -S0   <path>      path to an image containing the S0 data.\n");
+    fprintf(stderr, "                    This is optional, and if not supplied the\n");
+    fprintf(stderr, "                    S0 data will be computed internallly.\n\n");
     exit(0);
 
 }
@@ -980,7 +1026,7 @@ OUTPUT_DATA *initialize_output (nifti_image *template, int nfiles)
         out[i]->cal_max   = 0.0;
         out[i]->cal_min   = 0.0;
         out[i]->nifti_type= NIFTI_FTYPE_NIFTI1_1;
-        sprintf(out[i]->descrip, "TrackTools MOW Reconstruction");
+        sprintf(out[i]->descrip, "TrackTools QBI Reconstruction");
 
         nbl[i] = malloc(sizeof(nifti_brick_list));
         if (nbl[i] == NULL) {
@@ -1068,9 +1114,54 @@ int load_voxel_double_all(DIFF_DATA *diff, int x, int y, int z, double *dest) {
 
 }
 
-int nii_voxel3_index(nifti_image *nim, const int x, const int y, const int z)
-{
-    return (x + y*nim->nx + z*nim->nx*nim->ny);
+/*****************************************************************************
+ * Loads a voxel's diffusion data and divides it by the voxel's S0. 
+ * - Tests to see if the voxel is masked by diff->mask.
+ * - Returns only the diffusion-weighted values (b > 200)
+ * - returns 1 is loading succeeds
+ * - returns -1 if a inf/nan situation prevents the data (ie S0 = 0)
+ * - returns 0 is a mask hit prevents the data from loading.
+ *****************************************************************************/
+
+int load_voxel_double_highb(DIFF_DATA *diff, int x, int y, int z) {
+    
+    int index = nii_voxel3_index(diff->nii_image, x, y, z);
+    int i;
+    double *data = diff->single_voxel_storage;
+    double scl_slope = (double) diff->nii_image->scl_slope;
+    double scl_inter = (double) diff->nii_image->scl_inter;
+    float S0;
+    
+    if (diff->mask != NULL) {
+        int *mask = (int *)diff->mask->data;
+        if (mask != NULL && mask[index] == 0) return 0;
+    }
+    
+    S0 = (double) read_nii_voxel_anytype(diff->S0->data, 
+                     index, 
+                     diff->S0->datatype);
+    if (S0 == 0) return -1;
+    
+    nifti_brick_list *nbl = diff->nii_brick_list;
+    
+    for (i=0; i<diff->n_b_high; i++) {
+        
+        int b_ind = diff->b_high_ind[i];
+    
+    data[i] = (double)read_nii_voxel_anytype(nbl->bricks[b_ind], 
+                         index, 
+                         diff->nii_image->datatype);
+    
+        if (isinf(data[i]) || isnan(data[i])) {
+            return -2;
+        }
+        
+        data[i] = (data[i]*scl_slope+scl_inter)/S0; 
+        
+    }
+    
+    return 1;
+    
 }
 
 /*****************************************************************************
@@ -1081,7 +1172,6 @@ int nii_voxel3_index(nifti_image *nim, const int x, const int y, const int z)
  *****************************************************************************/
 void add_maxima_to_output(OUTPUT_DATA *output, int x, int y, int z, double **vertlist, MAXIMA *maxima_list, int n_maxima)
 {
-
     int i;
     int index = nii_voxel3_index(output->nim[0], x, y, z);
 
@@ -1096,6 +1186,7 @@ void add_maxima_to_output(OUTPUT_DATA *output, int x, int y, int z, double **ver
         //((float *)output->nbl[i]->bricks[0])[index] = mvert[0];
         //((float *)output->nbl[i]->bricks[1])[index] = mvert[1];
         //((float *)output->nbl[i]->bricks[2])[index] = mvert[2];
+
         ((float *)output->nbl[i]->bricks[0])[index] = vertlist[0][maxima_list[i].index];
         ((float *)output->nbl[i]->bricks[1])[index] = vertlist[1][maxima_list[i].index];
         ((float *)output->nbl[i]->bricks[2])[index] = vertlist[2][maxima_list[i].index];

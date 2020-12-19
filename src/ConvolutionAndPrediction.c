@@ -2,30 +2,27 @@
 #include"Interpolation.h"
 #include<stdlib.h>
 #include<stdio.h>
+#include<math.h>
 #include"Matrices.h"
+#include"pseudoinverse.h"
 
 void getDiffusionSignal(double **q, double **v, int qLen, int vLen,double**out){
 	//INPUT: Two arrays of points, and their respective lengths
-	//Out: Two dimensional m x p array H, dynamically allocated
+	//Out: Two dimensional m x p array H, equal to phi(cos-1(abs(Qt*V)))
 
 	//NOTE: Also used in finding diffusion signal estimate
 
-	//printf("getDiffusionSignal\n");
+	double* tempQ = malloc(sizeof(double)*3);
+	double* tempV = malloc(sizeof(double)*3);
 
 	for(int i = 0; i < qLen; ++i){
-		double* tempQ = malloc(sizeof(double)*3);
+
 		tempQ[0] = q[0][i];
 		tempQ[1] = q[1][i];
 		tempQ[2] = q[2][i];
 
-		//printf("Q[%d] = %f, %f, %f\n",i,tempQ[0],tempQ[1],tempQ[2]);
-
 		for(int j = 0; j < vLen; ++j){
 
-			//printf("i = %d, j = %d\n", i, j)
-
-
-			double* tempV = malloc(sizeof(double)*3);
 			tempV[0] = v[0][j]; 
 			tempV[1] = v[1][j]; 
 			tempV[2] = v[2][j];
@@ -33,41 +30,12 @@ void getDiffusionSignal(double **q, double **v, int qLen, int vLen,double**out){
 			double z = getKernel(tempQ,tempV);
 
 			out[i][j] = z;
-
-
-			free(tempV);
-			//printf("\n");
 		}
-		free(tempQ);
 	}
 
-}
+	free(tempQ);
+	free(tempV);
 
-double* estimateWeightVector(double ** H, int rows, int cols, double * e, int eLen) {
-	//Dimensions of H: m x p
-	//INPUT: q x v matrix H, vector e with length eLen
-	//OUTPUT: Array w, estimated weight vector
-	//Multiplies the pseudoinverse of H by e.
-
-	double ** HPlus = malloc(sizeof(double*) * rows);
-	for(int i = 0; i < rows; ++i){
-			HPlus[i] = malloc(sizeof(double) * cols);
-		}
-
-	pseudoInverse(H,rows, cols, HPlus);
-
-	//HPlus Dimensions: cols x rows (p x m)
-	//e Dimensions: m x 1
-
-	double* out = malloc(sizeof(double)*cols);
-	for(int i = 0; i < cols; ++i){ //Go through every ROW in HPlus
-		double sum = 0;
-		for(int j = 0; j < rows; ++j) { //Go through every COL in HPlus and multiply it by e[j]
-			sum += HPlus[j][i] * e[j];
-		}
-		out[i] = sum;
-	}
-	return out;
 }
 
 void getReconstructionMatrix(double ** G, double ** H, int k, int n, int p, int m, double ** out) {
@@ -76,45 +44,99 @@ void getReconstructionMatrix(double ** G, double ** H, int k, int n, int p, int 
 	//the summation should be implemented by repartitioning the (kn) x m matrix GH+ into a k x n x m array and then summing over the first dimension.
 
 	//Dimensions of G: (kn) x p
+	//Dimensions of H: m x p
 	//Dimensions of H+: p x m
+	//Dimensions of Summation Matrix: n x kn
 	//Dimensions of GH+: kn x m
 
 	//Dimensions of out:
 		//n x m
+
 
 	double ** mul = malloc(sizeof(double*) * k * n);
 	for(int i = 0; i < k * n; ++ i){
 		mul[i] = malloc(sizeof(double) * m);
 	}
 
+	double ** HPlus = malloc(sizeof(double*) * p);
+	for(int i = 0; i < p; ++i){
+			HPlus[i] = malloc(sizeof(double) * m);
+		}
+
+	double** summation = malloc(sizeof(double*)*n);
+	for(int i = 0; i < n; ++i){
+		summation[i] = malloc(sizeof(double)*k*n);
+	}
+
+	int marker = 0;
+	for(int i = 0; i < n; ++i){
+		for(int j = 0; j < k*n; ++j){
+			if(j >= marker && j < (marker+k)){
+				summation[i][j] = 1;
+			}
+			else{
+				summation[i][j] = 0;
+			}
+		}
+		marker += k;
+	}
+
+	pseudoInverse(H,m, p, HPlus);
+
+	printf("H: \n");
+	for(int i = 0; i < 5; ++i){
+		for(int j = 0; j < 5; ++j){
+			printf("%f,",H[i][j]);
+		}
+		printf("\n");
+	}
+
+
+	printf("H+: \n");
+	for(int i = 0; i < 5; ++i){
+        for(int j = 0; j < 5; ++j){
+            printf("%f,",HPlus[i][j]);
+        }
+        printf("\n");
+    }
+
+    /*printf("G: \n");
+    for(int i = 0; i < k*n; ++i){
+    	for(int j = 0; j < p; ++j){
+    		printf("%f ", G[i][j]);
+    	}
+    	printf("\n");
+    }*/
+
+
 	//Calculate GH+
 	for(int row = 0; row < (k*n); row++){
 		for(int col = 0; col < m; col++){
-			mul[row][col] = 0;
+			double sum = 0;
 			for(int mark = 0; mark < p; mark++){
-				mul[row][col] += G[row][mark] * H[mark][col];
+				sum += G[row][mark] * HPlus[mark][col];
 			}
+			mul[row][col] = sum;
 		}
 	}
 
-	/*
-	printf("Mul: \n");
-	for(int i = 0; i < (k*n);++i){
-		printf("%lf\t%lf\t%lf\t%lf\n",mul[i][0],mul[i][1],mul[i][2],mul[i][3]);
+	printf("GH+: \n");
+	for(int i = 0; i < 5;++i){
+		for(int j = 0; j < 5; ++j){
+			printf("%f,",mul[i][j]);
+		}
+		printf("\n");
 	}
-	*/
+	printf("\n");
 
-	//n = 2
-	//k = 3
-	//Then sum over equator
-	//k*n rows to k rows
-	for(int col = 0; col < m; col++){ //For every column,
-		for(int row = 0; row < n*k; row+=k){ //Iterate through every row and add k rows into 1 row
+	//Calculate (In X 1kT)GH+
+	for(int i = 0; i < n; ++i){
+		for(int j = 0; j < m; ++j){
 			double sum = 0;
-			for(int j = 0; j < k; j++){ //Add the row values from i to k into one figure, and then set the output to it
-				sum += mul[row+j][col];
+			for(int _ = 0; _ < k*n; ++_){
+				sum += summation[i][_]*mul[_][j];
 			}
-			out[row/k][col] = sum;
+			out[i][j] = sum;
 		}
 	}
 
@@ -123,6 +145,15 @@ void getReconstructionMatrix(double ** G, double ** H, int k, int n, int p, int 
 	}
 	free(mul);
 
+	for(int i = 0; i < p; ++i){
+		free(HPlus[i]);
+	}
+	free(HPlus);
+
+	for(int i = 0; i < n; ++i){
+		free(summation[i]);
+	}
+	free(summation);
 }
 
 
@@ -173,8 +204,10 @@ void computeODF(double ** A, double * e, int n, int m, double * out) { //Normali
 
 	//Calculates the estimated ODF, (1/Z)Ae, with Z being a normalization constant
 
-	//Output: (1/Z)Ae, n x 1 vector
+	//A: n x m
+	//e: m x 1
 
+	//Output: (1/Z)Ae, n x 1 vector
 
 	//Normalization Constant
 	double norm = 1 / calculateNormalizationConstant(A,e,n,m);
@@ -185,11 +218,9 @@ void computeODF(double ** A, double * e, int n, int m, double * out) { //Normali
 		for(int j = 0; j < m; ++j){
 			count += e[j] * A[i][j];
 		}
-		out[i] = count*norm;
+		out[i] = 1 - count*norm;
 		//printf("ODF[%d]: %f\t",i,count);
 	}
 	//printf("\n");
 
 }
-
-
