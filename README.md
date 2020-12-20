@@ -1,7 +1,5 @@
-# NOTE: This branch does NOT work! Use the soft equator branch instead.
-
 # Q-Ball
-  This is an implementation of the Q-Ball reconstruction algorithm in C. Built using tracktools' platform for calculating maxima and loading in the data.
+  This is an implementation of the Q-Ball reconstruction algorithm (Tuch et al. 2004) in C. Specifically, it uses the "soft equator" A = ϕ(cos−1 |UTQ|). Built using tracktools' platform for calculating maxima and loading in the data.
 
 ## Usage
   Navigate to the directory that q-ball is located.
