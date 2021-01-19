@@ -1,14 +1,15 @@
 #include"ConvolutionAndPrediction.h"
-#include"Interpolation.h"
 #include<stdlib.h>
 #include<stdio.h>
 #include<math.h>
 #include"Matrices.h"
 #include"pseudoinverse.h"
 
+#define pi 3.14159265358979323846
+
 void getDiffusionSignal(double **q, double **v, int qLen, int vLen,double**out){
 	//INPUT: Two arrays of points, and their respective lengths
-	//Out: Two dimensional m x p array H, equal to phi(cos-1(abs(Qt*V)))
+	//Out: Two dimensional m x p, equal to phi(cos-1(abs(Qt*V)))
 
 	//NOTE: Also used in finding diffusion signal estimate
 
@@ -223,4 +224,89 @@ void computeODF(double ** A, double * e, int n, int m, double * out) { //Normali
 	}
 	//printf("\n");
 
+}
+
+void getEquator(const int k, double ** C){
+
+	//In:
+	//	k sampling directions
+	//	3 x k output matrix C
+
+	//Operation:
+	//	Takes k sampling directions and returns an equator of k equally spaced points
+
+	//C must be 3 x k
+	//To allocate space for c (use in main):
+
+	for(int i = 0; i < k; ++i){
+		C[0][i] = cos((2 * pi / k) * (i + 1));
+		C[1][i] = sin((2 * pi / k) * (i + 1));
+		C[2][i] = 0;
+	}
+}
+
+void getRotationMat(double z[3],double u[3], double** out){
+
+	//In:
+	//	3 x 1 normal vector to the circle-plane
+	//	3 x 1 direction of interest u
+	//	3 x 3 output rotation matrix for that direction
+
+
+	double add[3];
+	double prod[3][3];
+
+	add[0] = z[0] + u[0];
+	add[1] = z[1] + u[1];
+	add[2] = z[2] + u[2];
+
+	matMulPoints(add, add, prod);
+	double div = mulPoints(z, u, 3) + 1;
+
+	//printf("Denom: %f\n", div);
+
+	for(int i = 0; i < 3; ++i){
+		for(int j = 0; j < 3; ++j){
+			prod[i][j] = prod[i][j] / div;
+		}
+	}
+	prod[0][0] --; //Subtract I from the matrix
+	prod[1][1] --;
+	prod[2][2] --;
+
+	for(int i = 0; i < 3; ++i) {
+		for(int j = 0; j < 3; ++j){
+			out[i][j] = prod[i][j];
+		}
+	}
+
+}
+
+double getKernel(double* n1, double* n2){
+	//printf("getKernel\n");
+	double width = 1; //WIDTH PARAMETER, LEFT CONSTANT FOR NOW
+
+	double mul = mulPoints(n1,n2,3);
+
+	if(mul < 0){
+		mul *= -1;
+	}
+
+	if(mul > 1 && mul <= 1.0001){ //Catch any floating point errors
+		mul = 1;
+	}
+	else if(mul < -1 && mul >= -1.0001){
+		mul = -1;
+	}
+
+	double d = acos(mul);
+
+
+	//spherical Gaussian function
+	
+	double nd2 = (d*d)*-1;
+	double out = exp(nd2/(width*width));
+
+	//printf("\t\tkernel: %f\n",out);
+	return out;
 }
