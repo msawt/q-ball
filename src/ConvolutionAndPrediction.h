@@ -22,4 +22,10 @@ double calculateNormalizationConstant(double ** A, double * e, int n, int m);
 
 void computeODF(double ** A, double * e, int n, int m, double * out);
 
+double getKernel(double* n1, double* n2);
+
+void getEquator(const int k, double ** C);
+
+void getRotationMat(double z[3],double u[3], double** out);
+
 #endif
