@@ -219,7 +219,7 @@ void computeODF(double ** A, double * e, int n, int m, double * out) { //Normali
 		for(int j = 0; j < m; ++j){
 			count += e[j] * A[i][j];
 		}
-		out[i] = 1 - count*norm;
+		out[i] = count*norm;
 		//printf("ODF[%d]: %f\t",i,count);
 	}
 	//printf("\n");
@@ -304,7 +304,7 @@ double getKernel(double* n1, double* n2){
 
 	//spherical Gaussian function
 	
-	double nd2 = (d*d)*-1;
+	double nd2 = (d*d);
 	double out = exp(nd2/(width*width));
 
 	//printf("\t\tkernel: %f\n",out);

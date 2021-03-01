@@ -78,19 +78,8 @@ int main(int argc, char **argv) {
         Q[1][i] = (double) diff.bvecs[diff.n_volumes+counter];
         Q[2][i] = (double) diff.bvecs[(2*diff.n_volumes)+counter];
 
-        //printf("Q[%d] = %f,%f,%f\n",i,Q[0][i],Q[1][i],Q[2][i]);
-        //printf("Q Length: %f\n", Q[0][i]*Q[0][i] + Q[1][i]*Q[1][i] + Q[2][i]*Q[2][i]);
         counter++;
 	}
-
-    //Load in directions of interest (no longer used)
-
-    /*
-    float * temp = malloc(3*sizeof(float)*199);
-
-    char *sphere = "sphere3.txt";
-    int n = read_acsii_file_to_float_array(sphere, temp, 3 * 199) / 3;
-    */
 
     int n = qbi.reco_tess->num_vertices;
     int n_reco_dirs = n;
@@ -113,15 +102,11 @@ int main(int argc, char **argv) {
 
         U[2][i] = qbi.reco_tess->vertices[i][2];
         V[2][i] = qbi.reco_tess->vertices[i][2];
-
-        //printf("U[%d]: %f, %f, %f\n",i,U[0][i],U[1][i],U[2][i]);
     }
 
     double** A = malloc(sizeof(double*)*n);
-    //double** A2 = malloc(sizeof(double*)*n);
     for(int i = 0; i < n; ++i){
         A[i] = malloc(sizeof(double)*m);
-        //A2[i] = malloc(sizeof(double)*m);
     }
 
     printf("Building Reconstruction Matrix...\n");
@@ -129,7 +114,7 @@ int main(int argc, char **argv) {
     //Inputs: 
         //Q : 3 × m column matrix of diffusion sampling wavevectors 
         //U : 3 × n column matrix of reconstruction points 
-    //Returns the reconstruction matrix A, approximated using the "soft equator" A = ϕ(cos−1 |UTQ|)
+    //Returns the reconstruction matrix A, approximated using the "soft equator" A = ϕ(cos−1 |UT * Q|)
     getDiffusionSignal(U,Q,n,m,A);
 
     //Set up the maxima list
@@ -140,16 +125,14 @@ int main(int argc, char **argv) {
     }
 
 	double* ODF = malloc(sizeof(double)*n);
+    float* GFA_image = malloc(sizeof(float)*diff.nii_image->nz*diff.nii_image->ny*diff.nii_image->nx);
 
     fprintf(stderr, "Starting QBI reconstruction...\n");
-    /////////////////////////////////////////////////////// ACTUAL RECON CODE FOR EACH VOXEL
 
+    long unsigned int count = 0;
     for (int vz=0; vz<diff.nii_image->nz; vz++) {
         for (int vy=0; vy<diff.nii_image->ny; vy++) {
             for (int vx=0; vx<diff.nii_image->nx; vx++) {
-                //double min = 1.0e+99, max = 0; //Possibly not needed
-                //int dec;
-                //int rec;
 
                 int n_maxima = 0;
 
@@ -157,8 +140,6 @@ int main(int argc, char **argv) {
 
 
             	int load_ok = load_voxel_double_highb(&diff, vx, vy, vz);
-
-                //printf("Loaded voxel data\n");
 
                 if (-1 == load_ok) {
                     if (qbi.log_bad_voxels != 0) {
@@ -173,6 +154,8 @@ int main(int argc, char **argv) {
                     }
                     continue;
                 } else if (0 == load_ok) {
+                    //Mask hit
+                    count++;
                     continue;
                 }
 
@@ -180,43 +163,45 @@ int main(int argc, char **argv) {
 
             	computeODF(A,e,n,m,ODF);
 
-
-                printf("ODF: \n");
-                for(int i = 0; i < n; ++i){
-                    printf("%f, ",ODF[i]);
-                }
-                printf("\n");
-
-                //printf("Negative ODF Values: \t");
-                int count = 0;
-                for(int i = 0; i < n; ++i){
-                    //printf("%f at %f,%f,%f\n",ODF[i], U[0][i],U[1][i],U[2][i]);
-                    if(ODF[i] < 0){
-                        count++;
-                    }
-                }
-                //printf("Number of Negative ODF Values: %d\n\n\n",count);
-
-                n_maxima = find_local_maxima(qbi.reco_tess,ODF,0,qbi.restart_tess,maxima_list); //prob_thresh is lower for testing, change back to qbi.prob_thresh for final version
-
-                printf("Maxima: ");
-                for(int i = 0; i < 5; ++i){
-                    printf("%f at %d,", maxima_list[i].value, maxima_list[i].index);
-                }
-                printf("\n\n");
+                n_maxima = find_local_maxima(qbi.reco_tess,ODF,qbi.prob_thresh,qbi.restart_tess,maxima_list);
 
                 add_maxima_to_output(output, vx, vy, vz, U, maxima_list, n_maxima);
 
-                //printf("Added maxima to output\n");
+                //Get GFA value
+                GFA_image[count] = (float) std(ODF,n)/rms(ODF,n);
 
                 memset(ODF, 0, n*sizeof(double));
 
-                //printf("Reset ODF memory\n");
                 free(max_list);
+                count++;
+                
             }
         }
         fprintf(stderr, "Slice: %d of %d Complete.\n", vz, diff.nii_image->nz);
         fflush(stderr);
+    }
+
+    if (qbi.GFAcompute == 1) {
+        nifti_image *GFA_nim = nifti_simple_init_nim();
+        memcpy(GFA_nim, diff.nii_image, sizeof(nifti_image));
+        
+        GFA_nim->datatype = DT_FLOAT32;
+        GFA_nim->ndim     = 3;
+        GFA_nim->nbyper   = 4;
+        GFA_nim->nt       = 1;
+        GFA_nim->nvox     = GFA_nim->nx * GFA_nim->ny * GFA_nim->nz;
+        GFA_nim->dim[4]   = 1;
+        GFA_nim->dim[0]   = 3;
+        GFA_nim->data = GFA_image;
+        GFA_nim->fname    = qbi.GFA_filename;
+        GFA_nim->iname    = qbi.GFA_filename;
+        GFA_nim->cal_max  = 0.0;
+        GFA_nim->cal_min  = 0.0;
+        qbi.GFA_filename = "GFA.nii.gz";
+
+        fprintf(stderr, "Saving GFA image to %s.\n", qbi.GFA_filename);
+        znzFile fp = znzopen(qbi.GFA_filename, "wb", 0);
+        nifti_image_write_hdr_img2(GFA_nim, 1, "wb", fp, NULL);
     }
 
     fprintf(stderr, "QBI Reconstruction complete... saving output...\n");
@@ -237,6 +222,9 @@ int main(int argc, char **argv) {
         free(A[i]);
     }
     free(A);
+
+    free(ODF);
+    free(GFA_image);
 
 	return 0;
 }
@@ -429,6 +417,10 @@ void qbi_initialize_opts(QBI_RECON *qbi, int argc, char **argv)
             opt++;
             continue;
         }
+        else if (0 == strcmp(argv[opt], "-GFAcompute")) {
+            qbi->GFAcompute = 1;
+            continue;
+        }
         else if (0 == strcmp(argv[opt], "-bval")) {
             if (opt+1 == argc || argv[opt+1][0] == '-') {
                 fprintf(stderr, "Error: -bval requires an argument.\n");
@@ -452,6 +444,10 @@ void qbi_initialize_opts(QBI_RECON *qbi, int argc, char **argv)
     } else if (qbi->bvec_filename == NULL) {
         fprintf(stderr, "The -bvec <path> option is required to specify the location\n");
         fprintf(stderr, "of the gradient directions for this data set.\n");
+        exit(1);
+    }
+    if (qbi->S0_filename == NULL){
+        printf("The -S0 <path> option is required.");
         exit(1);
     }
 

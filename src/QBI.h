@@ -7,9 +7,7 @@
 #include<stdbool.h>
 
 #include"nifti1_io.h"
-#include"Interpolation.h"
 #include"ConvolutionAndPrediction.h"
-#include"DirOfInterest.h"
 #include"Matrices.h"
 
 
@@ -59,6 +57,7 @@ typedef struct DIFF_DATA {
     nifti_image *nii_image;
     nifti_image *mask;
     nifti_image *S0;
+    nifti_image *GFA;
     double *single_voxel_storage;
     int n_volumes;
     float *bvecs;
@@ -82,6 +81,8 @@ typedef struct QBI_RECON {
     char *mask_filename;
     char *bvec_filename; //Q
     char *bval_filename;
+    char *GFA_filename;
+    int GFAcompute;
     char *datadir;
     int log_bad_voxels;
     int num_output_files;

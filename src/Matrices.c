@@ -66,3 +66,31 @@ void pseudoInverse(double**H, int rowDim, int colDim, double**out){
 	gsl_matrix_free(o);
 
 }
+
+double mean(double* ar, int n){
+	double m = 0;
+	for(int i = 0; i < n; ++i){
+		m += ar[i];
+	}
+	m /= n;
+	return m;
+}
+
+double rms(double* ar, int n){
+	double sum = 0;
+
+	for (int i = 0; i < n; i++)
+		sum += pow(ar[i], 2);
+
+	return sqrt(sum / n);
+}
+
+double std(double* ar, int n){
+	double m = mean(ar,n);
+	double sum;
+	for(int i = 0; i < n; ++i){
+		sum+= ((ar[i] - m)*(ar[i] - m));
+	}
+	sum /= (n-1);
+	return sqrt(sum);
+}

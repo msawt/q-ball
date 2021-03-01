@@ -5364,11 +5364,14 @@ znzFile nifti_image_write_hdr_img2(nifti_image *nim, int write_opts,
    int                   write_data, leave_open;
    char                  func[] = { "nifti_image_write_hdr_img2" };
 
+
+
    write_data = write_opts & 1;  /* just separate the bits now */
    leave_open = write_opts & 2;
 
+
    if( ! nim                              ) ERREX("NULL input") ;
-   if( ! nifti_validfilename(nim->fname)  ) ERREX("bad fname input") ;
+   //if( ! nifti_validfilename(nim->fname)  ) ERREX("bad fname input") ;
    if( write_data && ! nim->data && ! NBL ) ERREX("no image data") ;
 
    nifti_set_iname_offset(nim);
