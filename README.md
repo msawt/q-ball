@@ -1,5 +1,3 @@
-# NOTE: This branch does NOT work! Use the soft equator branch instead.
-
 # Q-Ball
   This is an implementation of the Q-Ball reconstruction algorithm in C. Built using tracktools' platform for calculating maxima and loading in the data.
 
