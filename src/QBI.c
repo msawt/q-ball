@@ -453,11 +453,7 @@ void qbi_initialize_opts(QBI_RECON *qbi, int argc, char **argv)
     }
 
     fprintf(stderr, "S0 image will be loaded from %s.\n", qbi->S0_filename);
-    char* input = malloc(sizeof(char)*(strlen(qbi->datadir)+strlen(qbi->S0_filename)));
-    strcpy(input,qbi->datadir);
-    strcat(input,qbi->S0_filename);
-
-    qbi->diff->S0 = nifti_image_read(input, 1);
+    qbi->diff->S0 = nifti_image_read(qbi->S0_filename, 1);
 
     free(input);
 
