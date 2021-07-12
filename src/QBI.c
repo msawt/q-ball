@@ -20,6 +20,7 @@ psi: computeODF
  */
 
 #include"QBI.h"
+#include<string.h>
 
 #define DT_FLOAT32 16
 #define NIFTI_FTYPE_NIFTI1_1  1
@@ -452,7 +453,14 @@ void qbi_initialize_opts(QBI_RECON *qbi, int argc, char **argv)
     }
 
     fprintf(stderr, "S0 image will be loaded from %s.\n", qbi->S0_filename);
-    qbi->diff->S0 = nifti_image_read(qbi->S0_filename, 1);
+    char* input = malloc(sizeof(char)*(strlen(qbi->datadir)+strlen(qbi->S0_filename)));
+    strcpy(input,qbi->datadir);
+    strcat(input,qbi->S0_filename);
+
+    qbi->diff->S0 = nifti_image_read(input, 1);
+
+    free(input);
+
     if (qbi->diff->S0 == NULL) {
         exit(1);
     }
@@ -983,8 +991,6 @@ void qbi_print_usage(void)
     fprintf(stderr, "  -log-bad-voxels   If this option is used, qbi_recon will print\n");
     fprintf(stderr, "                    a list of all voxels that could not be reconstructed.\n\n");
     fprintf(stderr, "  -S0   <path>      path to an image containing the S0 data.\n");
-    fprintf(stderr, "                    This is optional, and if not supplied the\n");
-    fprintf(stderr, "                    S0 data will be computed internallly.\n\n");
     exit(0);
 
 }
