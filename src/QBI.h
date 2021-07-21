@@ -24,7 +24,7 @@ const double DECO_EVALS[3] = {1.5, 0.4, 0.4};
 const double DELTA_SM      = 16.9100;
 const double DELTA_LG      = 29.7300;
 const double DIFF_RADIUS   = 10.0;
-const double PROB_THRESH   = 0.5;
+const double PROB_THRESH   = 0.0;
 
 typedef struct ICOS_TESS {
     int num_vertices;
