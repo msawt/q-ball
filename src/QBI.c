@@ -181,11 +181,12 @@ int main(int argc, char **argv) {
             	computeODF(A,e,n,m,ODF);
 
 
-                printf("ODF: \n");
+                /*printf("ODF: \n");
                 for(int i = 0; i < n; ++i){
                     printf("%f, ",ODF[i]);
                 }
                 printf("\n");
+		*/
 
                 //printf("Negative ODF Values: \t");
                 int count = 0;
@@ -199,12 +200,14 @@ int main(int argc, char **argv) {
 
                 n_maxima = find_local_maxima(qbi.reco_tess,ODF,0,qbi.restart_tess,maxima_list); //prob_thresh is lower for testing, change back to qbi.prob_thresh for final version
 
+		/*
                 printf("Maxima: ");
                 for(int i = 0; i < 5; ++i){
                     printf("%f at %d,", maxima_list[i].value, maxima_list[i].index);
                 }
                 printf("\n\n");
-
+		*/
+		    
                 add_maxima_to_output(output, vx, vy, vz, U, maxima_list, n_maxima);
 
                 //printf("Added maxima to output\n");
