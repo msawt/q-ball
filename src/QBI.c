@@ -948,11 +948,11 @@ int grad_find_max(double* ODF, int n, MAXIMA* maxima_list, int adj[199][4]){
 
     qsort((void *)maxima_list, n_maxima, sizeof(MAXIMA), &maxima_compare);
 
-    printf("First 5 Maxima values: \n");
+    /* printf("First 5 Maxima values: \n");
     for(int i = 0; i < 5; ++i){
         printf("%f at %d\t",maxima_list[i].value,maxima_list[i].index);
     }
-    printf("\n");
+    printf("\n"); */
 
     return n_maxima;
 }
