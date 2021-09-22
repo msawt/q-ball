@@ -7,9 +7,9 @@
 #include<stdbool.h>
 
 #include"nifti1_io.h"
-#include"Interpolation.h"
+//#include"Interpolation.h"
 #include"ConvolutionAndPrediction.h"
-#include"DirOfInterest.h"
+//#include"DirOfInterest.h"
 #include"Matrices.h"
 
 
