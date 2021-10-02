@@ -139,11 +139,11 @@ int main(int argc, char **argv) {
         exit(1);
     }
 
-	double* ODF = malloc(sizeof(double)*n);
+    	double* ODF = malloc(sizeof(double)*n);
+	float* GFA_image = malloc(sizeof(float)*diff.nii_image->nz*diff.nii_image->ny*diff.nii_image->nx);
 
     fprintf(stderr, "Starting QBI reconstruction...\n");
-    /////////////////////////////////////////////////////// ACTUAL RECON CODE FOR EACH VOXEL
-
+    long unsigned int count = 0;
     for (int vz=0; vz<diff.nii_image->nz; vz++) {
         for (int vy=0; vy<diff.nii_image->ny; vy++) {
             for (int vx=0; vx<diff.nii_image->nx; vx++) {
@@ -179,49 +179,48 @@ int main(int argc, char **argv) {
                 double* e = diff.single_voxel_storage;
 
             	computeODF(A,e,n,m,ODF);
-
-
-                /*printf("ODF: \n");
-                for(int i = 0; i < n; ++i){
-                    printf("%f, ",ODF[i]);
-                }
-                printf("\n");
-		*/
-
-                //printf("Negative ODF Values: \t");
-                int count = 0;
-                for(int i = 0; i < n; ++i){
-                    //printf("%f at %f,%f,%f\n",ODF[i], U[0][i],U[1][i],U[2][i]);
-                    if(ODF[i] < 0){
-                        count++;
-                    }
-                }
-                //printf("Number of Negative ODF Values: %d\n\n\n",count);
-
-                n_maxima = find_local_maxima(qbi.reco_tess,ODF,0,qbi.restart_tess,maxima_list); //prob_thresh is lower for testing, change back to qbi.prob_thresh for final version
-
-		/*
-                printf("Maxima: ");
-                for(int i = 0; i < 5; ++i){
-                    printf("%f at %d,", maxima_list[i].value, maxima_list[i].index);
-                }
-                printf("\n\n");
-		*/
+		    
+                n_maxima = find_local_maxima(qbi.reco_tess,ODF,qbi.prob_thresh,qbi.restart_tess,maxima_list); //prob_thresh is lower for testing, change back to qbi.prob_thresh for final version
 		    
                 add_maxima_to_output(output, vx, vy, vz, U, maxima_list, n_maxima);
-
-                //printf("Added maxima to output\n");
-
+		    
+		//Get GFA value
+                GFA_image[count] = (float) std(ODF,n)/rms(ODF,n);
+		    
                 memset(ODF, 0, n*sizeof(double));
-
-                //printf("Reset ODF memory\n");
+		    
+		    
                 free(max_list);
+		count++;
             }
         }
         fprintf(stderr, "Slice: %d of %d Complete.\n", vz, diff.nii_image->nz);
         fflush(stderr);
     }
 
+if (qbi.GFAcompute == 1) {
+        nifti_image *GFA_nim = nifti_simple_init_nim();
+        memcpy(GFA_nim, diff.nii_image, sizeof(nifti_image));
+        
+        GFA_nim->datatype = DT_FLOAT32;
+        GFA_nim->ndim     = 3;
+        GFA_nim->nbyper   = 4;
+        GFA_nim->nt       = 1;
+        GFA_nim->nvox     = GFA_nim->nx * GFA_nim->ny * GFA_nim->nz;
+        GFA_nim->dim[4]   = 1;
+        GFA_nim->dim[0]   = 3;
+        GFA_nim->data = GFA_image;
+        GFA_nim->fname    = qbi.GFA_filename;
+        GFA_nim->iname    = qbi.GFA_filename;
+        GFA_nim->cal_max  = 0.0;
+        GFA_nim->cal_min  = 0.0;
+        qbi.GFA_filename = "GFA.nii.gz";
+
+        fprintf(stderr, "Saving GFA image to %s.\n", qbi.GFA_filename);
+        znzFile fp = znzopen(qbi.GFA_filename, "wb", 0);
+        nifti_image_write_hdr_img2(GFA_nim, 1, "wb", fp, NULL);
+    }
+	
     fprintf(stderr, "QBI Reconstruction complete... saving output...\n");
     save_output(qbi.output_directory, output);
 
@@ -240,6 +239,9 @@ int main(int argc, char **argv) {
         free(A[i]);
     }
     free(A);
+	
+	free(ODF);
+	free(GFA_image);
 
 	return 0;
 }
@@ -430,6 +432,10 @@ void qbi_initialize_opts(QBI_RECON *qbi, int argc, char **argv)
             }
             qbi->S0_filename = argv[opt+1];
             opt++;
+            continue;
+        }
+	else if (0 == strcmp(argv[opt], "-GFAcompute")) {
+            qbi->GFAcompute = 1;
             continue;
         }
         else if (0 == strcmp(argv[opt], "-bval")) {
