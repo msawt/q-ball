@@ -173,6 +173,8 @@ int main(int argc, char **argv) {
                     }
                     continue;
                 } else if (0 == load_ok) {
+		    //Mask Hit
+		    count++;
                     continue;
                 }
 
