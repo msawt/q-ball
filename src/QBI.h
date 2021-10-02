@@ -26,7 +26,7 @@ const double DECO_EVALS[3] = {1.5, 0.4, 0.4};
 const double DELTA_SM      = 16.9100;
 const double DELTA_LG      = 29.7300;
 const double DIFF_RADIUS   = 10.0;
-const double PROB_THRESH   = 0.5;
+const double PROB_THRESH   = 0.0;
 
 typedef struct ICOS_TESS {
     int num_vertices;
@@ -59,6 +59,7 @@ typedef struct DIFF_DATA {
     nifti_image *nii_image;
     nifti_image *mask;
     nifti_image *S0;
+    nifti_image *GFA;
     double *single_voxel_storage;
     int n_volumes;
     float *bvecs;
@@ -109,10 +110,5 @@ void read_bvals_from_file(char *filename, DIFF_DATA *diff);
 
 void getA(double ** Q, double ** U, double ** V, int k, int m, int n, int p, double** A);
 void QBall(double* e, double** A, int n, int m, double* ODF);
-
-
-
-int grad_find_max(double* ODF, int n, MAXIMA* maxima_list, int adj[50][4]);
-int temp_find_max(double* ODF, int ODFLen, MAXIMA* maxima_list);
 
 #endif
