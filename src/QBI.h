@@ -83,6 +83,8 @@ typedef struct QBI_RECON {
     char *mask_filename;
     char *bvec_filename; //Q
     char *bval_filename;
+    char *GFA_filename;
+    int GFAcompute;
     char *datadir;
     int log_bad_voxels;
     int num_output_files;
