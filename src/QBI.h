@@ -11,6 +11,7 @@
 #include"ConvolutionAndPrediction.h"
 //#include"DirOfInterest.h"
 #include"Matrices.h"
+#include"pseudoinverse.h"
 
 
 #ifdef _WIN32
