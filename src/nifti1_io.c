@@ -287,7 +287,7 @@ static char * gni_history[] =
   "   - nifti_copy_extensions(): clear num_ext and ext_list\n"
   "1.20 27 Jun 2006 [rickr]\n",
   "   - nifti_findhdrname(): fixed assign of efirst to match stated logic\n"
-  "     (problem found by Atle Bjørnerud)\n"
+  "     (problem found by Atle BjÃ¸rnerud)\n"
   "1.21 05 Sep 2006 [rickr] update for nifticlib-0.4 release\n",
   "   - was reminded to actually add nifti_set_skip_blank_ext()\n"
   "   - init g_opts.skip_blank_ext to 0\n"
@@ -5368,7 +5368,7 @@ znzFile nifti_image_write_hdr_img2(nifti_image *nim, int write_opts,
    leave_open = write_opts & 2;
 
    if( ! nim                              ) ERREX("NULL input") ;
-   if( ! nifti_validfilename(nim->fname)  ) ERREX("bad fname input") ;
+   //if( ! nifti_validfilename(nim->fname)  ) ERREX("bad fname input") ;
    if( write_data && ! nim->data && ! NBL ) ERREX("no image data") ;
 
    nifti_set_iname_offset(nim);
